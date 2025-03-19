@@ -3,5 +3,7 @@ Rails.application.routes.draw do
   resources :products, only: [:index, :show, :create, :update, :destroy]
   resources :orders, only: [:index, :show, :create, :update, :destroy]
   post "/login", to: "auth#login"
+  get "/me", to: "users#me"
+
 
 end
