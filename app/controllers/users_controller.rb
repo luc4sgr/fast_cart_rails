@@ -37,6 +37,10 @@ class UsersController < ApplicationController
       @user.destroy
       head :no_content
     end
+
+    def me
+      render json: @current_user, status: :ok
+    end
   
     private
   
@@ -47,7 +51,12 @@ class UsersController < ApplicationController
     end
   
     def user_params
-      params.require(:user).permit(:name, :email)
+      params.require(:user).permit(:name, :email, :password)
     end
+    
+   
+
+    
+    
   end
   
