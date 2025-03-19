@@ -4,6 +4,9 @@ Rails.application.routes.draw do
   resources :orders, only: [:index, :show, :create, :update, :destroy]
   post "/login", to: "auth#login"
   get "/me", to: "users#me"
+  namespace :admin do
+  get "/dashboard", to: "admin#dashboard"
 
+  
 
 end
