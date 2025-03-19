@@ -1,0 +1,38 @@
+# 🔒 Arquivos Sensíveis (Chaves e Credenciais)
+config/master.key
+config/credentials.yml.enc
+secrets
+
+# 🚀 Arquivos Temporários e Logs
+/log/*
+!/log/.keep
+/tmp/*
+!/tmp/.keep
+storage/*
+!/storage/.keep
+/public/uploads
+/public/assets
+/public/packs
+
+# 🛠️ Dependências e Build
+/node_modules
+/vendor/bundle
+/yarn-error.log
+.yarn-cache
+/.pnp
+/.pnp.js
+
+# 🚫 Arquivos de Cache e Banco de Dados Local
+/db/*.sqlite3
+/db/*.sqlite3-journal
+/db/schema.rb
+
+# ⚙️ Arquivos do Kamal e Docker (se não for necessário no repo)
+.kamal
+/docker-compose.yml
+Dockerfile
+
+# 📑 Arquivos de Teste Automático (se não quiser manter no repo)
+test/
+spec/
+coverage/
