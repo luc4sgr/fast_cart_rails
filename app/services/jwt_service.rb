@@ -1,4 +1,4 @@
-require 'jwt'
+require "jwt"
 
 class JwtService
     SECRET_KEY = Rails.application.credentials.secret_key_base || "chave_super_secreta"
