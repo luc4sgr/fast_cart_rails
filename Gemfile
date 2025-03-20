@@ -67,3 +67,5 @@ gem "jwt", "~> 2.10"
 gem "rack-cors", "~> 2.0"
 
 gem "bcrypt", "~> 3.1"
+
+gem "rspec-rails", "~> 7.1"
