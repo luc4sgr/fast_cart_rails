@@ -1,89 +1,90 @@
 class OrdersController < ApplicationController
-    before_action :set_order, only: [ :show, :update, :destroy ]
+  before_action :set_order, only: [:show, :update, :destroy]
+  before_action :authorize_owner, only: [:show, :update, :destroy]
 
-    # GET /orders
-    def index
-      @orders = Order.all
-      render json: @orders
-    end
+  # GET /orders
+  def index
+    @orders = Order.where(user_id: @current_user.id).includes(:order_items, :products)
+    render json: @orders, include: [:order_items, :products]
+  end
 
-    # GET /orders/:id
-    def show
-      render json: @order
-    end
+  # GET /orders/:id
+  def show
+    render json: @order, include: [:order_items, :products]
+  end
 
-    def create
-        ActiveRecord::Base.transaction do
-          @order = Order.new(user_id: params[:order][:user_id], status: "pendente", total_price: 0)
+  # POST /orders
+  def create
+    ActiveRecord::Base.transaction do
+      @order = Order.new(user: @current_user, status: "pendente", total_price: 0)
 
-          if @order.save
+      if @order.save
+        total_price = 0
 
-            total_price = 0
+        params[:order][:products].each do |item|
+          product = Product.find(item[:product_id])
+          quantity = item[:quantity].to_i
 
-            params[:order][:products].each do |product_item|
-              product = Product.find(product_item[:product_id])
+          if product.stock >= quantity
+            price = product.price * quantity
+            total_price += price
 
-              if product.stock >= product_item[:quantity].to_i
-                order_item_price = product.price * product_item[:quantity].to_i
+            OrderItem.create!(
+              order: @order,
+              product: product,
+              quantity: quantity,
+              price: price
+            )
 
-                total_price += order_item_price
-
-                OrderItem.create!(
-                  order: @order,
-                  product: product,
-                  quantity: product_item[:quantity],
-                  price: order_item_price
-                )
-
-                product.update!(stock: product.stock - product_item[:quantity].to_i)
-              else
-                render json: { error: "Estoque insuficiente para o produto #{product.name}" }, status: :unprocessable_entity
-return
-              end
-            end
-
-            @order.update!(total_price: total_price)
-              # Notificar o cliente que o pedido foi criado
-              NotificationService.send_notification(@order.user, "Seu pedido ##{@order.id} foi criado com sucesso!")
-
-              # Notificar todos os administradores sobre o novo pedido
-              admins = User.where(admin: true)
-              admins.each do |admin|
-                NotificationService.send_notification(admin, "Novo pedido ##{@order.id} foi criado por #{@order.user.name}.")
-              end
-
-            render json: @order, include: :order_items, status: :created
+            product.update!(stock: product.stock - quantity)
           else
-            render json: @order.errors, status: :unprocessable_entity
+            render json: { error: "Estoque insuficiente para #{product.name}" }, status: :unprocessable_entity
+            raise ActiveRecord::Rollback
           end
         end
-      end
 
+        @order.update!(total_price: total_price)
 
-    # PATCH/PUT /orders/:id
-    def update
-      if @order.update(order_params)
-        render json: @order
+        # Envia notificações
+        NotificationService.send_notification(@current_user, "Seu pedido ##{@order.id} foi criado com sucesso!")
+        User.where(admin: true).each do |admin|
+          NotificationService.send_notification(admin, "Novo pedido ##{@order.id} criado por #{@current_user.name}")
+        end
+
+        render json: @order, include: :order_items, status: :created
       else
         render json: @order.errors, status: :unprocessable_entity
       end
     end
+  end
 
-    # DELETE /orders/:id
-    def destroy
-      @order.destroy
-      head :no_content
+  # PATCH/PUT /orders/:id
+  def update
+    if @order.update(order_params)
+      render json: @order
+    else
+      render json: @order.errors, status: :unprocessable_entity
     end
+  end
 
-    private
+  # DELETE /orders/:id
+  def destroy
+    @order.destroy
+    head :no_content
+  end
 
-    def set_order
-      @order = Order.find(params[:id])
-    rescue ActiveRecord::RecordNotFound
-      render json: { error: "Pedido não encontrado" }, status: :not_found
-    end
+  private
 
-    def order_params
-      params.require(:order).permit(:user_id, :total_price, :status)
-    end
+  def set_order
+    @order = Order.find_by(id: params[:id])
+    render json: { error: "Pedido não encontrado" }, status: :not_found unless @order
+  end
+
+  def authorize_owner
+    render json: { error: "Acesso negado" }, status: :forbidden unless @order.user_id == @current_user.id
+  end
+
+  def order_params
+    params.require(:order).permit(:status)
+  end
 end
